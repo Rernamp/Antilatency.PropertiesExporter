@@ -1,0 +1,2 @@
+add_subdirectory(AntilatencySDK.Cmake)
+add_subdirectory(CLI11)

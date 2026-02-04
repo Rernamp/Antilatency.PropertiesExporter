@@ -1,0 +1,6 @@
+[submodule "Dependencies/AntilatencySDK.Cmake/AntilatencySDK"]
+	path = Dependencies/AntilatencySDK.Cmake/AntilatencySDK
+	url = https://github.com/AntilatencySDK/Release_4.5.0.git
+[submodule "Dependencies/CLI11"]
+	path = Dependencies/CLI11
+	url = https://github.com/CLIUtils/CLI11.git
