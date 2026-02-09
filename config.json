@@ -1,0 +1,10 @@
+{
+    "targetDeviceProperties": {
+        "a":"as",
+        "b":"as"
+    },
+    "dumpedProperties": [
+        "sys/Temperature",
+        "sys/Voltage"
+    ]
+}

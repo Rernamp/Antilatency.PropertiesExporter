@@ -1,0 +1,18 @@
+#pragma once
+
+#include <string>
+#include <map>
+
+struct ConfigSettings {
+    std::map<std::string, std::string> targetDeviceProperties {};
+};
+
+struct ApplicationSettings {
+    std::size_t period_ms {1};
+    std::size_t samples_count {10};
+    std::size_t waitDeviceTimeout_ms {2000};
+    bool enableIpDevices {false};
+};
+
+ConfigSettings parseFromString(const std::string& str);
+
