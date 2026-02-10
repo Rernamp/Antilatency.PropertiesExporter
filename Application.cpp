@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <format>
 #include <chrono>
 #include <thread>
 
@@ -34,11 +35,13 @@ Application::Application(const ConfigSettings& configSettings, const Application
     }
 }
 
-std::string getCurrentDateAndTime(const char* timeFormat = "%d_%m_%Y_%H_%M_%S") {
-    const auto t = std::time(nullptr);
-    const auto tm = *std::localtime(&t);
-    std::ostringstream oss;
-    oss << std::put_time(&tm, timeFormat);
+std::string getCurrentDateAndTime(const char* timeFormat = "{:%d_%m_%Y_%H_%M_%OS}") {
+    auto n = std::chrono::system_clock::now();
+    auto in_time_t = std::chrono::system_clock::to_time_t(n);
+    std::tm buf;
+    localtime_s(&buf, &in_time_t);
+    std::stringstream oss {};
+    oss << std::put_time(&buf, timeFormat);
     return oss.str();
 }
 
