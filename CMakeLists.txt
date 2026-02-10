@@ -21,6 +21,7 @@ target_link_libraries(Antilatency.PropertiesExporter PRIVATE
     CLI11::CLI11
     Antilatency::SDK
     nlohmann_json::nlohmann_json
+    csv2::csv2
 )
 
 

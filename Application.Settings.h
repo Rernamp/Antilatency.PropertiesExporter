@@ -2,9 +2,11 @@
 
 #include <string>
 #include <map>
+#include <vector>
 
 struct ConfigSettings {
     std::map<std::string, std::string> targetDeviceProperties {};
+    std::vector<std::string> dumpProperties {};
 };
 
 struct ApplicationSettings {

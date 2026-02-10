@@ -3,7 +3,7 @@
         "a":"as",
         "b":"as"
     },
-    "dumpedProperties": [
+    "dumpProperties": [
         "sys/Temperature",
         "sys/Voltage"
     ]
