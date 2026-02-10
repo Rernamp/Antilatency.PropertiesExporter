@@ -35,13 +35,13 @@ Application::Application(const ConfigSettings& configSettings, const Application
     }
 }
 
-std::string getCurrentDateAndTime(const char* timeFormat = "{:%d_%m_%Y_%H_%M_%OS}") {
+std::string getCurrentDateAndTime(const char* timeFormat = "%d_%m_%Y_%H_%M_%S") {
     auto n = std::chrono::system_clock::now();
     auto in_time_t = std::chrono::system_clock::to_time_t(n);
     std::tm buf;
     localtime_s(&buf, &in_time_t);
     std::stringstream oss {};
-    oss << std::put_time(&buf, timeFormat);
+    oss << std::put_time(&buf, "%Y-%m-%d %X");
     return oss.str();
 }
 
