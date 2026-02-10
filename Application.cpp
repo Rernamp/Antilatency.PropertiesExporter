@@ -34,11 +34,11 @@ Application::Application(const ConfigSettings& configSettings, const Application
     }
 }
 
-std::string getCurrentDateAndTime() {
+std::string getCurrentDateAndTime(const char* timeFormat = "%d_%m_%Y_%H_%M_%S") {
     const auto t = std::time(nullptr);
     const auto tm = *std::localtime(&t);
     std::ostringstream oss;
-    oss << std::put_time(&tm, "%d_%m_%Y_%H_%M_%S");
+    oss << std::put_time(&tm, timeFormat);
     return oss.str();
 }
 
@@ -63,10 +63,21 @@ int Application::run() {
 
     csv2::Writer<csv2::delimiter<';'>> csvWriter {csvFileStream};
 
+    {
+        std::vector<std::string> csvHead {"Timestamp", "ElapsedTime_ms"};
+        csvHead.insert(csvHead.end(), configSettings.dumpProperties.begin(), configSettings.dumpProperties.end());
+        csvWriter.write_row(csvHead);
+    }
+
     std::vector<std::string> properties {configSettings.dumpProperties.size()};
+    auto startDumpTime = std::chrono::steady_clock::now();
     try {
         for (std::size_t i = 0; i < settings.samples_count; ++i) {
+            auto beforeDump = std::chrono::steady_clock::now();
             auto propertyManager = _deviceNetwork.nodeStartPropertyTask(targetNode);
+
+            properties.emplace_back(getCurrentDateAndTime());
+            properties.emplace_back(std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(beforeDump - startDumpTime).count()));
 
             if (!propertyManager) {
                 std::cout << "Failed to create property manager" << std::endl;
@@ -80,7 +91,13 @@ int Application::run() {
             csvWriter.write_row(properties);
             properties.clear();
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(settings.period_ms));
+            auto afterDump = std::chrono::steady_clock::now();
+
+            auto elapsedTime_ms = std::chrono::duration_cast<std::chrono::milliseconds>(afterDump - beforeDump);
+
+            auto sleep_ms = std::max(std::chrono::milliseconds(settings.period_ms) - elapsedTime_ms, std::chrono::milliseconds(0));
+
+            std::this_thread::sleep_for(sleep_ms);
         }
     } catch (const std::exception& exp) {
         std::cout << "Failed to dump with error: " << exp.what() << std::endl;
@@ -100,6 +117,8 @@ Antilatency::DeviceNetwork::NodeHandle Application::waitTargetDevice() {
 
     auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
     while (static_cast<std::size_t>(duration_ms) < settings.waitDeviceTimeout_ms) {
+        now = std::chrono::steady_clock::now();
+        duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
         const auto nodes = _deviceNetwork.getNodes();
         for (const auto& node : nodes) {
             if (_deviceNetwork.nodeGetStatus(node) != NodeStatus::Idle) {
@@ -110,6 +129,9 @@ Antilatency::DeviceNetwork::NodeHandle Application::waitTargetDevice() {
                 break;
             }
         }
+        if (result != NodeHandle::Null) {
+            break;
+        }
     }
 
     return result;
@@ -118,11 +140,11 @@ Antilatency::DeviceNetwork::NodeHandle Application::waitTargetDevice() {
 bool Application::isTargetNode(const Antilatency::DeviceNetwork::NodeHandle& node) {
     using namespace Antilatency::DeviceNetwork;
 
-    bool result{node == NodeHandle::Null};
+    bool result{node != NodeHandle::Null};
 
     try {
         auto propertyTask = _deviceNetwork.nodeStartPropertyTask(node);
-        result &= !propertyTask;
+        result &= propertyTask;
         for (const auto& [key, value] : configSettings.targetDeviceProperties) {
             if (!result) {
                 break;

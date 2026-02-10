@@ -29,3 +29,8 @@ add_subdirectory(Dependencies)
 include(Dependencies/AntilatencySDK.Cmake/CopySDK.cmake)
 
 copy_antilatency_sdk(Antilatency.PropertiesExporter)
+
+add_custom_command(TARGET Antilatency.PropertiesExporter POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:Antilatency.PropertiesExporter> ${CMAKE_CURRENT_SOURCE_DIR}/config.json $<TARGET_FILE_DIR:Antilatency.PropertiesExporter>
+    COMMENT "Copy default config.json"
+)

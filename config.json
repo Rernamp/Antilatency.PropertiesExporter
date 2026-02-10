@@ -1,10 +1,9 @@
 {
     "targetDeviceProperties": {
-        "a":"as",
-        "b":"as"
+        "sys/HardwareName":"Alt"
     },
     "dumpProperties": [
-        "sys/Temperature",
-        "sys/Voltage"
+        "sys/MCU/Voltage",
+        "sys/MCU/Temperature"
     ]
 }
