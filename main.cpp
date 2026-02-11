@@ -13,6 +13,7 @@ void fillComandLineArguments(CLI::App& app, ApplicationSettings& settings, std::
     app.add_option("--samplesCount", settings.samples_count, "Samples count")->check(CLI::NonNegativeNumber)->capture_default_str();
     app.add_option("--waitDeviceTimeout", settings.waitDeviceTimeout_ms, "Wait device timeout")->check(CLI::NonNegativeNumber)->capture_default_str();
     app.add_flag("--ipDevices", settings.enableIpDevices, "Enable IP devices in device network")->capture_default_str();
+    app.add_flag("--printProgress", settings.printProgress, "Enable printing progress of capture")->capture_default_str();
 }
 
 int main(int argc, char** argv) {
@@ -49,6 +50,11 @@ int main(int argc, char** argv) {
         configSettings = parseFromString(configFileValue);
     } catch (const std::exception& exp) {
         std::cout << "Failed to parse json with error: " << exp.what() << std::endl;
+        return -1;
+    }
+
+    if (configSettings.dumpProperties.empty() || configSettings.targetDeviceProperties.empty()) {
+        std::cout << "json filed dumpProperties or targetDeviceProperties empty" << std::endl;
         return -1;
     }
 

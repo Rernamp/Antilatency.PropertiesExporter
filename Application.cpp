@@ -94,6 +94,10 @@ int Application::run() {
             csvWriter.write_row(properties);
             properties.clear();
 
+            if (settings.printProgress) {
+                std::cout << "Iteration " << (i + 1) << "/" << settings.samples_count << " completed" << std::endl;
+            }
+
             auto afterDump = std::chrono::steady_clock::now();
 
             auto elapsedTime_ms = std::chrono::duration_cast<std::chrono::milliseconds>(afterDump - beforeDump);
