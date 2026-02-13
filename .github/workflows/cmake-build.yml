@@ -3,9 +3,15 @@ name: CMake Build
 on:
   push:
     branches: [main, master]
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'  # Только версии типа 1.0.0, 2.1.5 (без v)
+      - 'release-*'               # Теги начинающиеся с release-
+      - 'build-*'                 # Теги начинающиеся с build-
   pull_request:
     branches: [main, master]
   workflow_dispatch:
+  release:
+    types: [created]  # Запускать при создании релиза
 
 env:
   BUILD_TYPE: Release
@@ -47,6 +53,9 @@ jobs:
         Get-ChildItem -Path $sourceDir -Filter "*.dll" | Copy-Item -Destination $windowsDir -Force
         Get-ChildItem -Path $sourceDir -Filter "*.json" | Copy-Item -Destination $windowsDir -Force
         
+        # Создаем ZIP архив для удобства скачивания
+        Compress-Archive -Path "$windowsDir\*" -DestinationPath "${{github.workspace}}/windows-build.zip" -Force
+        
         Write-Host "Files in windows folder:"
         Get-ChildItem -Path $windowsDir | Select-Object Name, Length, LastWriteTime
       shell: pwsh
@@ -58,3 +67,15 @@ jobs:
         name: windows-build-${{github.sha}}
         path: ${{github.workspace}}/windows/**
         retention-days: 7
+
+    - name: Upload to Release
+      if: success() && startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          ${{github.workspace}}/windows-build.zip
+          ${{github.workspace}}/windows/**
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
