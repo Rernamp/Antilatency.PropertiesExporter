@@ -4,14 +4,18 @@ on:
   push:
     branches: [main, master]
     tags:
-      - '[0-9]+.[0-9]+.[0-9]+'  # Только версии типа 1.0.0, 2.1.5 (без v)
-      - 'release-*'               # Теги начинающиеся с release-
-      - 'build-*'                 # Теги начинающиеся с build-
+      - '[0-9]+.[0-9]+.[0-9]+'
+      - 'release-*'
+      - 'build-*'
   pull_request:
     branches: [main, master]
   workflow_dispatch:
   release:
-    types: [created]  # Запускать при создании релиза
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: read
 
 env:
   BUILD_TYPE: Release
@@ -49,15 +53,27 @@ jobs:
         
         New-Item -ItemType Directory -Force -Path $windowsDir
         
-        Get-ChildItem -Path $sourceDir -Filter "*.exe" | Copy-Item -Destination $windowsDir -Force
-        Get-ChildItem -Path $sourceDir -Filter "*.dll" | Copy-Item -Destination $windowsDir -Force
-        Get-ChildItem -Path $sourceDir -Filter "*.json" | Copy-Item -Destination $windowsDir -Force
+        # Копируем файлы с проверкой существования
+        if (Test-Path $sourceDir) {
+          Get-ChildItem -Path $sourceDir -Filter "*.exe" -ErrorAction SilentlyContinue | Copy-Item -Destination $windowsDir -Force
+          Get-ChildItem -Path $sourceDir -Filter "*.dll" -ErrorAction SilentlyContinue | Copy-Item -Destination $windowsDir -Force
+          Get-ChildItem -Path $sourceDir -Filter "*.json" -ErrorAction SilentlyContinue | Copy-Item -Destination $windowsDir -Force
+        }
         
-        # Создаем ZIP архив для удобства скачивания
-        Compress-Archive -Path "$windowsDir\*" -DestinationPath "${{github.workspace}}/windows-build.zip" -Force
+        # Проверяем, есть ли файлы перед созданием архива
+        if (Test-Path $windowsDir) {
+          Compress-Archive -Path "$windowsDir\*" -DestinationPath "${{github.workspace}}/windows-build.zip" -Force
+        }
         
         Write-Host "Files in windows folder:"
-        Get-ChildItem -Path $windowsDir | Select-Object Name, Length, LastWriteTime
+        Get-ChildItem -Path $windowsDir -ErrorAction SilentlyContinue | Select-Object Name, Length, LastWriteTime
+        
+        # Проверяем существование zip файла
+        if (Test-Path "${{github.workspace}}/windows-build.zip") {
+          Write-Host "ZIP archive created successfully"
+        } else {
+          Write-Host "ZIP archive was not created"
+        }
       shell: pwsh
 
     - name: Upload artifacts from windows folder
@@ -73,9 +89,14 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          ${{github.workspace}}/windows-build.zip
-          ${{github.workspace}}/windows/**
+          ${{ github.workspace }}/windows-build.zip
         draft: false
         prerelease: false
+        name: Release ${{ github.ref_name }}
+        body: |
+          Автоматически созданный релиз для версии ${{ github.ref_name }}
+          
+          ## Содержимое:
+          - Исполняемые файлы и библиотеки для Windows
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
