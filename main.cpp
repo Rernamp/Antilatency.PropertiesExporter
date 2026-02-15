@@ -11,7 +11,7 @@ void fillComandLineArguments(CLI::App& app, ApplicationSettings& settings, std::
     app.add_option("--config", configFilePath, "Config json file path")->check(CLI::ExistingFile)->required();
     app.add_option("--period", settings.period_ms, "Period between dump properties, ms")->check(CLI::NonNegativeNumber)->capture_default_str();
     app.add_option("--samplesCount", settings.samples_count, "Samples count")->check(CLI::NonNegativeNumber)->capture_default_str();
-    app.add_option("--waitDeviceTimeout", settings.waitDeviceTimeout_ms, "Wait device timeout")->check(CLI::NonNegativeNumber)->capture_default_str();
+    app.add_option("--waitDeviceTimeout", settings.waitDeviceTimeout_ms, "Wait device timeout, ms")->check(CLI::NonNegativeNumber)->capture_default_str();
     app.add_flag("--ipDevices", settings.enableIpDevices, "Enable IP devices in device network")->capture_default_str();
     app.add_flag("--printProgress", settings.printProgress, "Enable printing progress of capture")->capture_default_str();
 }

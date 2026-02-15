@@ -4,9 +4,13 @@
 #include <map>
 #include <vector>
 
+struct Property {
+    std::string propertyName {};
+    std::string alias {};
+};
 struct ConfigSettings {
     std::map<std::string, std::string> targetDeviceProperties {};
-    std::vector<std::string> dumpProperties {};
+    std::vector<Property> dumpProperties {};
 };
 
 struct ApplicationSettings {

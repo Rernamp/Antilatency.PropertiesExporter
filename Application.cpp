@@ -1,12 +1,13 @@
 #include "Application.h"
+#include "ThreadSafeQueue.h"
 
 #include <Antilatency.InterfaceContract.LibraryLoader.h>
 #include <Antilatency.InterfaceContract.PathResolver.h>
 
-#include <iostream>
-#include <fstream>
-#include <format>
 #include <chrono>
+#include <format>
+#include <fstream>
+#include <iostream>
 #include <thread>
 
 #include <csv2/writer.hpp>
@@ -40,7 +41,7 @@ std::string getCurrentDateAndTime(const char* timeFormat = "%d_%m_%Y_%H_%M_%S") 
     auto in_time_t = std::chrono::system_clock::to_time_t(n);
     std::tm buf;
     localtime_s(&buf, &in_time_t);
-    std::stringstream oss {};
+    std::stringstream oss{};
     oss << std::put_time(&buf, timeFormat);
     return oss.str();
 }
@@ -57,22 +58,44 @@ int Application::run() {
         return -1;
     }
 
-    std::string fileName {getCurrentDateAndTime() + ".csv"};
-    std::ofstream csvFileStream {fileName};
+    std::string fileName{getCurrentDateAndTime() + ".csv"};
+    std::ofstream csvFileStream{fileName};
 
     if (!csvFileStream.is_open()) {
         std::cout << "Failed to create file " << fileName << std::endl;
     }
 
-    csv2::Writer<csv2::delimiter<';'>> csvWriter {csvFileStream};
+    csv2::Writer<csv2::delimiter<';'>> csvWriter{csvFileStream};
 
     {
-        std::vector<std::string> csvHead {"Timestamp", "ElapsedTime_ms"};
-        csvHead.insert(csvHead.end(), configSettings.dumpProperties.begin(), configSettings.dumpProperties.end());
+        std::vector<std::string> csvHead{"Timestamp", "ElapsedTime_ms"};
+        for (const auto& property : configSettings.dumpProperties) {
+            if (property.alias.empty()) {
+                csvHead.emplace_back(property.propertyName);
+            } else {
+                csvHead.emplace_back(property.alias);
+            }
+        }
         csvWriter.write_row(csvHead);
     }
 
-    std::vector<std::string> properties {configSettings.dumpProperties.size()};
+    TSQueue<std::vector<std::string>> queue{};
+    std::thread writeToFile{[&] {
+        try {
+            for (std::size_t i = 0; i < settings.samples_count; ++i) {
+                auto properties = queue.pop();
+                csvWriter.write_row(properties);
+
+                if (settings.printProgress) {
+                    std::cout << "Iteration " << (i + 1) << "/" << settings.samples_count << " completed" << std::endl;
+                }
+            }
+        } catch (const std::exception& exp) {
+            std::cout << "Failed to write file with error: " << exp.what() << std::endl;
+        }
+    }};
+
+    std::vector<std::string> properties{};
     auto startDumpTime = std::chrono::steady_clock::now();
     try {
         for (std::size_t i = 0; i < settings.samples_count; ++i) {
@@ -87,16 +110,12 @@ int Application::run() {
                 break;
             }
 
-            for (const auto& key : configSettings.dumpProperties) {
-                properties.push_back(propertyManager.getStringProperty(key));
+            for (const auto& property : configSettings.dumpProperties) {
+                properties.push_back(propertyManager.getStringProperty(property.propertyName));
             }
 
-            csvWriter.write_row(properties);
+            queue.push(properties);
             properties.clear();
-
-            if (settings.printProgress) {
-                std::cout << "Iteration " << (i + 1) << "/" << settings.samples_count << " completed" << std::endl;
-            }
 
             auto afterDump = std::chrono::steady_clock::now();
 
@@ -110,6 +129,10 @@ int Application::run() {
         std::cout << "Failed to dump with error: " << exp.what() << std::endl;
     }
 
+    if (writeToFile.joinable()) {
+        writeToFile.join();
+    }
+
     csvFileStream.close();
 
     return 0;
@@ -117,7 +140,7 @@ int Application::run() {
 
 Antilatency::DeviceNetwork::NodeHandle Application::waitTargetDevice() {
     using namespace Antilatency::DeviceNetwork;
-    NodeHandle result {NodeHandle::Null};
+    NodeHandle result{NodeHandle::Null};
     auto start = std::chrono::steady_clock::now();
 
     auto now = std::chrono::steady_clock::now();
@@ -178,7 +201,7 @@ bool Application::targetNodeContainRequiredProperties(const Antilatency::DeviceN
             return false;
         }
         for (const auto& property : configSettings.dumpProperties) {
-            propertyTask.getStringProperty(property);
+            propertyTask.getStringProperty(property.propertyName);
         }
     } catch (const std::exception& exp) {
         std::cout << "Failed to get property with error " << exp.what() << std::endl;

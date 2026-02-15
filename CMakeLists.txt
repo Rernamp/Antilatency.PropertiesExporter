@@ -14,6 +14,7 @@ target_sources(Application INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/Application.h
     ${CMAKE_CURRENT_SOURCE_DIR}/Application.Settings.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Application.Settings.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/ThreadSafeQueue.h
 )
 
 target_link_libraries(Antilatency.PropertiesExporter PRIVATE

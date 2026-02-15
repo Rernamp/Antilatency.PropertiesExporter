@@ -4,6 +4,11 @@
 
 using json = nlohmann::json;
 
+void from_json(const json& j, Property& property) {
+    j.at("alias").get_to(property.alias);
+    j.at("propertyName").get_to(property.propertyName);
+}
+
 void from_json(const json& j, ConfigSettings& settings) {
     j.at("targetDeviceProperties").get_to(settings.targetDeviceProperties);
     j.at("dumpProperties").get_to(settings.dumpProperties);
