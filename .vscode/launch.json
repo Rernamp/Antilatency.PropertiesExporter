@@ -12,7 +12,8 @@
             "console": "integratedTerminal",
             "args": [
                 "--config", "${workspaceFolder}\\config.json",
-                "--ipDevices"
+                "--ipDevices",
+                "--period", "1000"
             ]
         }
     ]

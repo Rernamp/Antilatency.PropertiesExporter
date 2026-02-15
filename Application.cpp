@@ -117,13 +117,9 @@ int Application::run() {
             queue.push(properties);
             properties.clear();
 
-            auto afterDump = std::chrono::steady_clock::now();
+            auto sleep_until = beforeDump + std::chrono::milliseconds(settings.period_ms);
 
-            auto elapsedTime_ms = std::chrono::duration_cast<std::chrono::milliseconds>(afterDump - beforeDump);
-
-            auto sleep_ms = std::max(std::chrono::milliseconds(settings.period_ms) - elapsedTime_ms, std::chrono::milliseconds(0));
-
-            std::this_thread::sleep_for(sleep_ms);
+            std::this_thread::sleep_until(sleep_until);
         }
     } catch (const std::exception& exp) {
         std::cout << "Failed to dump with error: " << exp.what() << std::endl;
