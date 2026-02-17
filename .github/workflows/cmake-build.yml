@@ -19,6 +19,7 @@ permissions:
 
 env:
   BUILD_TYPE: Release
+  ARTIFACT_NAME: windows-build
 
 jobs:
   build:
@@ -36,7 +37,7 @@ jobs:
     - name: Configure CMake
       run: |
         cmake -B ${{github.workspace}}/build `
-              -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} `
+              -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
       shell: pwsh
 
     - name: Build project
@@ -46,50 +47,49 @@ jobs:
               --parallel 4
       shell: pwsh
 
-    - name: Copy to windows folder
+    - name: Prepare artifacts
       run: |
         $sourceDir = "${{github.workspace}}/build/${{env.BUILD_TYPE}}"
-        $windowsDir = "${{github.workspace}}/windows"
+        $artifactDir = "${{github.workspace}}/${{env.ARTIFACT_NAME}}"
+        $zipPath = "${{github.workspace}}/${{env.ARTIFACT_NAME}}.zip"
         
-        New-Item -ItemType Directory -Force -Path $windowsDir
+        # Создаем директорию для артефактов
+        New-Item -ItemType Directory -Force -Path $artifactDir
         
-        # Копируем файлы с проверкой существования
+        # Копируем файлы
         if (Test-Path $sourceDir) {
-          Get-ChildItem -Path $sourceDir -Filter "*.exe" -ErrorAction SilentlyContinue | Copy-Item -Destination $windowsDir -Force
-          Get-ChildItem -Path $sourceDir -Filter "*.dll" -ErrorAction SilentlyContinue | Copy-Item -Destination $windowsDir -Force
-          Get-ChildItem -Path $sourceDir -Filter "*.json" -ErrorAction SilentlyContinue | Copy-Item -Destination $windowsDir -Force
+          Get-ChildItem -Path $sourceDir -Include "*.exe", "*.dll", "*.json" -Recurse | Copy-Item -Destination $artifactDir -Force
         }
         
-        # Проверяем, есть ли файлы перед созданием архива
-        if (Test-Path $windowsDir) {
-          Compress-Archive -Path "$windowsDir\*" -DestinationPath "${{github.workspace}}/windows-build.zip" -Force
+        # Создаем архив
+        if (Test-Path $artifactDir) {
+          Compress-Archive -Path "$artifactDir/*" -DestinationPath $zipPath -Force
+          Write-Host "ZIP archive created: $zipPath"
+          Write-Host "ZIP exists: $(Test-Path $zipPath)"
         }
         
-        Write-Host "Files in windows folder:"
-        Get-ChildItem -Path $windowsDir -ErrorAction SilentlyContinue | Select-Object Name, Length, LastWriteTime
+        # Проверяем содержимое
+        Write-Host "Files in artifact folder:"
+        Get-ChildItem -Path $artifactDir | Select-Object Name, Length, LastWriteTime
         
-        # Проверяем существование zip файла
-        if (Test-Path "${{github.workspace}}/windows-build.zip") {
-          Write-Host "ZIP archive created successfully"
-        } else {
-          Write-Host "ZIP archive was not created"
-        }
+        # Сохраняем путь для следующих шагов
+        echo "ZIP_PATH=$zipPath" | Out-File -FilePath $env:GITHUB_ENV -Append
+        echo "ARTIFACT_DIR=$artifactDir" | Out-File -FilePath $env:GITHUB_ENV -Append
       shell: pwsh
 
-    - name: Upload artifacts from windows folder
-      if: success() && matrix.os == 'windows-latest'
+    - name: Upload artifacts
+      if: success()
       uses: actions/upload-artifact@v4
       with:
-        name: windows-build-${{github.sha}}
-        path: ${{github.workspace}}/windows/**
+        name: ${{env.ARTIFACT_NAME}}-${{github.sha}}
+        path: ${{env.ARTIFACT_DIR}}
         retention-days: 7
 
     - name: Upload to Release
       if: success() && startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1
       with:
-        files: |
-          ${{ github.workspace }}/windows-build.zip
+        files: ${{env.ZIP_PATH}}
         draft: false
         prerelease: false
         name: Release ${{ github.ref_name }}
