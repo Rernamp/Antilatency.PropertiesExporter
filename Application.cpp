@@ -102,7 +102,7 @@ int Application::run() {
             auto beforeDump = std::chrono::steady_clock::now();
             auto propertyManager = _deviceNetwork.nodeStartPropertyTask(targetNode);
 
-            properties.emplace_back(getCurrentDateAndTime("%d/%m/%Y%H:%M:%S"));
+            properties.emplace_back(getCurrentDateAndTime("%d/%m/%Y %H:%M:%S"));
             properties.emplace_back(std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(beforeDump - startDumpTime).count()));
 
             if (!propertyManager) {
